@@ -1,0 +1,67 @@
+﻿@{
+    ViewData["Title"] = "Home";
+}
+
+<div class="welcome-section" style="background-color: #f2f2f2; padding: 30px; text-align: center;">
+    <h1 class="welcome-message" style="font-size: 2rem; font-weight: bold;">Welcome to the Drug Information App</h1>
+    <p>This page contains data for different medications. Explore the charts below for detailed insights.</p>
+</div>
+
+<div class="graph-section" style="display: flex; justify-content: space-between; padding: 20px;">
+    <div class="graph-container">
+        <h2 class="graph-title" style="font-size: 1.5rem;">Top Reactions from Adverse Events</h2>
+        <canvas id="reactionsChart"></canvas>
+        <p style="font-size: 1rem; margin-top: 10px; text-align: center;">This chart shows the most common reactions reported from adverse events associated with various medications. The number of cases is represented by the bars, allowing you to easily compare the frequency of each reaction.</p>
+    </div>
+    <div class="graph-container">
+        <h2 class="graph-title" style="font-size: 1.5rem;">Gender Distribution of Adverse Events</h2>
+        <canvas id="genderDistributionChart"></canvas>
+        <p style="font-size: 1rem; margin-top: 10px; text-align: center;">This pie chart visualizes the gender distribution of adverse events reported with medications. Each segment represents a different gender, showing the proportion of cases for each.</p>
+    </div>
+</div>
+
+
+<script>
+    var topReactions = @Html.Raw(ViewData["TopReactions"]);
+    var genderDistribution = @Html.Raw(ViewData["GenderDistribution"]);
+
+    var ctx1 = document.getElementById('reactionsChart').getContext('2d');
+    new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: topReactions.map(r => r.Reaction),
+            datasets: [{
+                label: 'Number of Cases',
+                data: topReactions.map(r => r.Count),
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    var ctx2 = document.getElementById('genderDistributionChart').getContext('2d');
+    new Chart(ctx2, {
+        type: 'pie',
+        data: {
+            labels: genderDistribution.map(g => g.Gender),
+            datasets: [{
+                label: 'Gender Distribution',
+                data: genderDistribution.map(g => g.Count),
+                backgroundColor: ['#ff6384', '#36a2eb', '#ffce56'],
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+</script>

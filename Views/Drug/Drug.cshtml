@@ -1,0 +1,240 @@
+<div class="container" >
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <input type="text" id="searchInput" class="form-control" placeholder="Search drugs...">
+        </div>
+        <div class="row" id="drugsContainer"></div>
+        <nav style="border-bottom: 50px;">
+            <ul class="pagination justify-content-center" id="paginationControls"></ul>
+        </nav>
+    </div>
+</div>
+
+
+<div id="drugDetailsModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="drugDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="drugDetailsModalLabel"><span id="drugName"></span></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <div class="accordion-header" id="headingPurpose">
+                            <span>Purpose</span>
+                        </div>
+                        <div id="collapsePurpose" class="accordion-body">
+                            <span id="drugPurpose"></span>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <div class="accordion-header" id="headingActiveIngredient">
+                            <span>Active Ingredients</span>
+                        </div>
+                        <div id="collapseActiveIngredient" class="accordion-body">
+                            <span id="drugActiveIngredient"></span>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <div class="accordion-header" id="headingIndications">
+                            <span>Indications</span>
+                        </div>
+                        <div id="collapseIndications" class="accordion-body">
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <div class="accordion-header" id="headingWarnings">
+                            <span>Warnings</span>
+                        </div>
+                        <div id="collapseWarnings" class="accordion-body">
+                            <span id="drugWarnings"></span>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <div class="accordion-header" id="headingDosage">
+                            <span>Dosage</span>
+                        </div>
+                        <div id="collapseDosage" class="accordion-body">
+                            <span id="drugDosage"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="graph-dist-container" style="justify-content: center; align-items: center; height: 300px;">
+                    <h2>Indication Distribution</h2>
+                    <canvas id="graph1"></canvas>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+    $(document).ready(function () {
+    var currentPage = 1;
+    var itemsPerPage = 6;
+
+    function fetchDrugs(page = 1) {
+        currentPage = page;
+
+        console.log("Fetching drugs...");
+
+        var searchQuery = $("#searchInput").val();
+        $.ajax({
+            url: '/Drug/FetchDrugs',
+            type: 'GET',
+            data: { page: currentPage, itemsPerPage: itemsPerPage, searchQuery: searchQuery },
+            success: function (response) {
+                console.log("Full Response:", response);
+
+                if (!response || !Array.isArray(response.drugs)) {
+                    console.error("Unexpected response format", response);
+                        return;
+                }                
+                $("#drugsContainer").empty();
+                response.drugs.forEach(drug => {
+                    $("#drugsContainer").append(`
+                        <div class="col-md-4 mb-4">
+                            <div class="card shadow-sm border-0">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">${drug.openFda.genericName ?? "Name not available"}</h5>
+                                    <p class="card-text">Purpose: ${drug.purpose ?? "N/A"}</p>
+                                    <button class="btn btn-primary view-details-btn" data-id="${drug.id}">View Details</button>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                });
+
+                generatePagination(response.totalPages, currentPage);
+            },
+            error: function (xhr, status, error) {
+                console.error("Error fetching drugs:", error);
+            }
+        });
+    }
+
+    $(document).on('click', '.accordion-header', function () {
+        var item = $(this).closest('.accordion-item');
+        item.toggleClass('active');
+        var body = item.find('.accordion-body');
+        body.toggle();
+
+        if (item.hasClass('active')) {
+            item.siblings().removeClass('active').find('.accordion-body').slideUp();
+        }
+    });
+
+    $('#searchInput').on('input', function () {
+        currentPage = 1;
+        fetchDrugs();
+    });
+
+    function generatePagination(totalPages, currentPage) {
+        var pagination = $("#paginationControls");
+        pagination.empty();
+
+        var maxPagesToShow = 5;
+        var startPage = Math.max(1, currentPage - 2);
+        var endPage = Math.min(totalPages, currentPage + 2);
+
+        if (currentPage - 2 > 1) {
+            pagination.append('<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>');
+            pagination.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
+        }
+
+        for (var i = startPage; i <= endPage; i++) {
+            var activeClass = i === currentPage ? "active" : "";
+            pagination.append(`<li class="page-item ${activeClass}">
+                <a class="page-link" href="#" data-page="${i}">${i}</a>
+            </li>`);
+        }
+
+        if (currentPage + 2 < totalPages) {
+            pagination.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
+            pagination.append(`<li class="page-item"><a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a></li>`);
+        }
+    }
+
+
+    $(document).on("click", "#paginationControls .page-link", function (e) {
+            e.preventDefault();
+            var newPage = $(this).data("page");
+            if (newPage !== currentPage) {
+                fetchDrugs(newPage);
+            }
+        });
+
+    $(document).on("click", "#closeModalBtn", function () {
+            $("#drugDetailsModal").modal("hide");
+        });
+
+    $(document).on("click", ".view-details-btn", function () {
+        var drugId = $(this).data("id");
+
+        $.ajax({
+            url: '/Drug/GetDetails?id=' + drugId,
+            type: 'GET',
+            dataType: "json",
+            success: function (response) {
+                if (response.success) {
+                    var drug = response.data;
+                    $("#drugName").text(drug.openFda.genericName || "Name not available");
+                    $("#drugPurpose").text(drug.purpose || "Purpose not available.");
+                    $("#drugWarnings").text(drug.warnings || "Warnings not available.");
+                    $("#drugDosage").text(drug.dosage || "Dosage not available.");
+                    $("#drugActiveIngredient").text(drug.ActiveIngredient || "Active ingredients not available.");
+                    $("#drugIndications").text(drug.Indications || "Indications not available.");
+
+                    if (drug.indicationLabels.length > 0 && drug.indicationCounts.length > 0) {
+                        initializeIndicationsGraph(drug.indicationLabels, drug.indicationCounts);
+                    }
+                    $('#drugDetailsModal').modal('show');
+                }
+            }
+        });
+    });
+
+    function initializeIndicationsGraph(labels, data) {
+        var ctx = document.getElementById('graph1').getContext('2d');
+        if (window.indicationsChart) {
+            window.indicationsChart.destroy();
+        }
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Indication Distribution',
+                    data: data,
+                    backgroundColor: ['red', 'blue', 'green', 'orange', 'purple'],
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    fetchDrugs();
+});
+
+</script>
