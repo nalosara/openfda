@@ -23,12 +23,5 @@ This application retrieves and displays drug information from the OpenFDA API. I
 1. Clone the repository:
    ```bash
    git clone https://github.com/nalosara/openfda.git
-2. Open project and navigate to appsettings.json. Add the following:
-    "OpenFda": {
-        "ApiKey": "your-api-key-here",
-        "BaseUrl": "https://api.fda.gov"
-    },
-    "ConnectionStrings": {
-        "DefaultConnection": "connection-to-db"
-    }
+2. Open project and navigate to appsettings.json. Add ConnectionString with connection to the db, and the OpenFDA API Key and base url.
 3. Open terminal and run 'dotnet run'.
